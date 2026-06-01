@@ -50,3 +50,7 @@ void setup() {
     Serial.println("System ready.");
 
 }
+
+void loop() {
+    
+}

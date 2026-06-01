@@ -47,18 +47,22 @@
     }
   ],
   "connections": [
-    [ "ds18b20:VCC", "esp32:3V3", "red", [] ],
-    [ "ds18b20:GND", "esp32:GND.1", "black", [] ],
-    [ "ds18b20:DQ", "esp32:D4", "yellow", [] ],
-    [ "r1:1", "esp32:3V3", "red", [] ],
-    [ "r1:2", "esp32:D4", "yellow", [] ],
-    [ "reedSwitch:1", "esp32:GND.1", "black", [] ],
-    [ "reedSwitch:2", "esp32:D5", "green", [] ],
-    [ "lcd:VCC", "esp32:3V3", "red", [] ],
-    [ "lcd:GND", "esp32:GND.1", "black", [] ],
-    [ "lcd:SDA", "esp32:D21", "blue", [] ],
-    [ "lcd:SCL", "esp32:D22", "yellow", [] ],
-    [ "buzzer:1", "esp32:D18", "orange", [] ],
-    [ "buzzer:2", "esp32:GND.1", "black", [] ]
-  ]
+  [ "ds18b20:VCC", "esp32:3V3", "red", [] ],
+  [ "ds18b20:GND", "esp32:GND.1", "black", [] ],
+  [ "ds18b20:DQ", "esp32:D4", "green", [] ],
+  
+  [ "r1:1", "esp32:3V3", "orange", [] ],
+  [ "r1:2", "esp32:D4", "orange", [] ],
+
+  [ "reedSwitch:1", "esp32:GND.1", "black", [] ],
+  [ "reedSwitch:2", "esp32:D5", "green", [] ],
+
+  [ "lcd:VCC", "esp32:3V3", "red", [] ],
+  [ "lcd:GND", "esp32:GND.1", "black", [] ],
+  [ "lcd:SDA", "esp32:D21", "blue", [] ],
+  [ "lcd:SCL", "esp32:D22", "yellow", [] ],
+
+  [ "buzzer:1", "esp32:D18", "purple", [] ],
+  [ "buzzer:2", "esp32:GND.1", "black", [] ]
+]
 }
