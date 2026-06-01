@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "author": "Medical Cart Monitor",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ds18b20",
+      "id": "ds18b20",
+      "top": -80,
+      "left": 200,
+      "attrs": { "celsius": "5.0" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -60,
+      "left": 150,
+      "attrs": { "value": "4700" }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "reedSwitch",
+      "top": 100,
+      "left": 200,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd",
+      "top": 200,
+      "left": 200,
+      "attrs": { "address": "0x27" }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 300,
+      "left": 200,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "ds18b20:VCC", "esp32:3V3", "red", [] ],
+    [ "ds18b20:GND", "esp32:GND.1", "black", [] ],
+    [ "ds18b20:DQ", "esp32:D4", "yellow", [] ],
+    [ "r1:1", "esp32:3V3", "red", [] ],
+    [ "r1:2", "esp32:D4", "yellow", [] ],
+    [ "reedSwitch:1", "esp32:GND.1", "black", [] ],
+    [ "reedSwitch:2", "esp32:D5", "green", [] ],
+    [ "lcd:VCC", "esp32:3V3", "red", [] ],
+    [ "lcd:GND", "esp32:GND.1", "black", [] ],
+    [ "lcd:SDA", "esp32:D21", "blue", [] ],
+    [ "lcd:SCL", "esp32:D22", "yellow", [] ],
+    [ "buzzer:1", "esp32:D18", "orange", [] ],
+    [ "buzzer:2", "esp32:GND.1", "black", [] ]
+  ]
+}
