@@ -36,13 +36,13 @@
       "id": "lcd",
       "top": 200,
       "left": 200,
-      "attrs": { "address": "0x27" }
+      "attrs": { "pins": "i2c", "address": "0x27" }
     },
     {
       "type": "wokwi-buzzer",
       "id": "buzzer",
-      "top": 300,
-      "left": 200,
+      "top": 100,
+      "left": 400,
       "attrs": {}
     }
   ],
@@ -56,7 +56,6 @@
 
   [ "reedSwitch:1", "esp32:GND.1", "black", [] ],
   [ "reedSwitch:2", "esp32:D5", "green", [] ],
-
   [ "lcd:VCC", "esp32:3V3", "red", [] ],
   [ "lcd:GND", "esp32:GND.1", "black", [] ],
   [ "lcd:SDA", "esp32:D21", "blue", [] ],
