@@ -44,6 +44,20 @@
       "top": 100,
       "left": 400,
       "attrs": {}
+    },
+    {
+      "type": "wokwi-microsd-card",
+      "id": "sd",
+      "top": 400,
+      "left": 200,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ds3231",
+      "id": "rtc",
+      "top": 400,
+      "left": 400,
+      "attrs": {}
     }
   ],
   "connections": [
@@ -62,6 +76,18 @@
   [ "lcd:SCL", "esp32:D22", "yellow", [] ],
 
   [ "buzzer:1", "esp32:D18", "purple", [] ],
-  [ "buzzer:2", "esp32:GND.1", "black", [] ]
-]
+  [ "buzzer:2", "esp32:GND.1", "black", [] ],
+
+  [ "sd:SCK",  "esp32:D14", "cyan", [] ],
+  [ "sd:MOSI", "esp32:D13", "purple", [] ],
+  [ "sd:MISO", "esp32:D12", "blue", [] ],
+  [ "sd:CS",   "esp32:D15", "yellow", [] ],
+  [ "sd:VCC",  "esp32:3V3", "red", [] ],
+  [ "sd:GND",  "esp32:GND.1", "black", [] ],
+
+  [ "rtc:SDA", "esp32:D21", "blue", [] ],
+  [ "rtc:SCL", "esp32:D22", "yellow", [] ],
+  [ "rtc:VCC", "esp32:3V3", "red", [] ],
+  [ "rtc:GND", "esp32:GND.1", "black", [] ]
+  ]
 }
