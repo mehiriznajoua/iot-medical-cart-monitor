@@ -7,6 +7,8 @@
 #include <RtcDS3231.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <ThingSpeak.h>
+
 
 //pin definitions
 #define TEMP_PIN 4   // DS18B20 data line
@@ -26,7 +28,11 @@
 #define WIFI_PASSWORD ""  // no password in Wokwi
 #define MQTT_BROKER "broker.hivemq.com"  // free public MQTT broker
 #define MQTT_PORT 1883
-#define MQTT_TOPIC "medicalcart/alert"
+#define MQTT_TOPIC "medicalcart/trolley01/data"
+
+//ThingSpeak definitions
+#define THINGSPEAK_CHANNEL  3399583
+#define THINGSPEAK_API_KEY  "JKDC66IXQVNFB47Q"
 
 //sensor setup
 OneWire oneWire(TEMP_PIN);
@@ -38,6 +44,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 //wifi + MQTT setup
 WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
+
 
 //Buzzer setup
 unsigned long lastBuzzTime = 0;
@@ -93,6 +100,23 @@ void setup() {
     // Connect to WiFi and MQTT
     connectMQTT();
 
+    // Start ThingSpeak
+    ThingSpeak.begin(wifiClient);
+
+    // Starting SD card
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    if (!sd.begin(SD_CS)) {
+        Serial.println("SD card failed!");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("SD CARD ERROR");
+    } else {
+        Serial.println("SD card ready.");
+        logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END);
+        logFile.println("timestamp, temperature, door, state");
+        logFile.close();
+    }
+
     //starting LCD
     lcd.init();
     lcd.backlight();
@@ -105,19 +129,6 @@ void setup() {
     lcd.clear();
 
     Serial.println("System ready.");
-
-    //Starting SD card
-    if (!sd.begin(SD_CS, SD_SCK_MHZ(4))) {
-        Serial.println("SD card failed!");
-        lcd.clear();
-        lcd.print("SD CARD ERROR");
-    } else {
-        Serial.println("SD card ready.");
-        // Create or open log file
-        logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END);
-        logFile.println("time_ms, temperature, door, state");
-        logFile.close();
-    }
 
     //door interruption
     attachInterrupt(digitalPinToInterrupt(DOOR_PIN), doorISR, CHANGE);
@@ -182,7 +193,6 @@ void loop() {
         }
 
         //SERIAL DEBUG
-
         Serial.print("Temp: "); Serial.print(temp);
         Serial.print(" C | Door: "); Serial.println(doorOpen ? "OPEN" : "CLOSED");
         Serial.print("State: ");
@@ -251,7 +261,10 @@ void loop() {
             if (!mqtt.connected()) {
                 mqtt.connect("MedicalCartMonitor");
             }
-            String message = getTimestamp() + " | " + stateStr + " | Temp: " + String(temp) + "C";
+            String message = "{\"id\":\"trolley01\""
+                            ",\"temp\":" + String(temp) +
+                            ",\"door\":\"" + (doorOpen ? "OPEN" : "CLOSED") + "\""
+                            ",\"state\":\"" + stateStr + "\"}";
             mqtt.publish(MQTT_TOPIC, message.c_str());
         }
         mqtt.loop();
@@ -259,6 +272,7 @@ void loop() {
     }
 
     //BUZZER REACTION
+    now = millis();
     if (currentState == NORMAL) {
         digitalWrite(BUZZER_PIN, LOW);
         buzzState = false;
