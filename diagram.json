@@ -53,7 +53,7 @@
       "attrs": {}
     },
     {
-      "type": "wokwi-ds3231",
+      "type": "wokwi-ds1307",
       "id": "rtc",
       "top": 400,
       "left": 400,

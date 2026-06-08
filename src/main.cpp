@@ -4,7 +4,7 @@
 #include <DallasTemperature.h>
 #include <LiquidCrystal_I2C.h>
 #include <SdFat.h>
-#include <RtcDS3231.h>
+#include <RtcDS1307.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ThingSpeak.h>
@@ -59,7 +59,7 @@ bool buzzState = false;
 SdFat sd;
 SdFile logFile;
 
-RtcDS3231<TwoWire> rtc(Wire);
+RtcDS1307<TwoWire> rtc(Wire);
 
 
 volatile bool doorJustOpened = false;
