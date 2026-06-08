@@ -319,18 +319,6 @@ void loop() {
         // FAIL-SAFE: sound the buzzer immediately
         digitalWrite(BUZZER_PIN, HIGH);
 
-        // FAIL-SAFE: publish critical alert via MQTT
-        StaticJsonDocument<200> doc;
-        doc["id"]    = "trolley01";
-        doc["temp"]  = "ERROR";
-        doc["door"]  = doorOpen ? "OPEN" : "CLOSED";
-        doc["state"] = "PANNE_CAPTEUR";
-
-        char message[200];
-        serializeJson(doc, message);
-
-        mqtt.publish(MQTT_TOPIC, message);
-
         // FAIL-SAFE: log the fault to SD card
         if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
         logFile.print(getTimestamp());
@@ -390,43 +378,36 @@ void loop() {
               logFile.print(", ");
               logFile.println(stateStr);
               logFile.close();
-          }}
-        } else {
+          }}}
+            else {
             Serial.println("SD write failed!");
         }
-
-        //MQTT ALERT
-        if (currentState != NORMAL && currentState != PANNE_CAPTEUR) {
-            if (!mqtt.connected()) {
-                mqtt.connect("MedicalCartMonitor");
-            }
-            StaticJsonDocument<256> doc;
-
-            doc["id"] = "trolley01";
-            doc["temperature"] = temp;
-            doc["door"] = doorOpen ? "OPEN" : "CLOSED";
-            doc["state"] = stateStr;
-            doc["timestamp"] = timestamp;
-
-            char buffer[256];
-            serializeJson(doc, buffer);
-
-            mqtt.publish(MQTT_TOPIC, buffer);
+        // MQTT messages
+        if (!mqtt.connected()) {
+          mqtt.connect("MedicalCartMonitor");
         }
-        mqtt.loop();
 
-    }
+        StaticJsonDocument<256> doc;
+        doc["id"]          = "trolley01";
+        doc["temperature"] = temp;
+        doc["door"]        = doorOpen ? "OPEN" : "CLOSED";
+        doc["state"]       = stateStr;
+        doc["timestamp"]   = timestamp;
 
-    //BUZZER REACTION
-    now = millis();
-    if (currentState == NORMAL) {
-        digitalWrite(BUZZER_PIN, LOW);
-        buzzState = false;
-        // Save power
-        enterLightSleep();
+        char buffer[256];
+        serializeJson(doc, buffer);
+        mqtt.publish(MQTT_TOPIC, buffer);
+
+        //BUZZER REACTION
+        now = millis();
+        if (currentState == NORMAL) {
+          digitalWrite(BUZZER_PIN, LOW);
+          buzzState = false;
+          // Save power
+          enterLightSleep();
     } 
-    else {
-        if (now - lastBuzzTime >= 500) {
+        else {
+          if (now - lastBuzzTime >= 500) {
             lastBuzzTime = now;
             buzzState = !buzzState;
             digitalWrite(BUZZER_PIN, buzzState ? HIGH : LOW);
@@ -435,4 +416,4 @@ void loop() {
 
 
 
-}
+}}
