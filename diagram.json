@@ -32,11 +32,11 @@
       "attrs": {}
     },
     {
-      "type": "wokwi-lcd1602",
-      "id": "lcd",
+      "type": "wokwi-ssd1306",
+      "id": "oled",
       "top": 200,
       "left": 200,
-      "attrs": { "pins": "i2c", "address": "0x27" }
+      "attrs": {}
     },
     {
       "type": "wokwi-buzzer",
@@ -50,7 +50,7 @@
       "id": "sd",
       "top": 400,
       "left": 200,
-      "attrs": {}
+      "attrs": { "fatType": "FAT16" }
     },
     {
       "type": "wokwi-ds1307",
@@ -70,10 +70,11 @@
 
   [ "reedSwitch:1", "esp32:GND.1", "black", [] ],
   [ "reedSwitch:2", "esp32:D5", "green", [] ],
-  [ "lcd:VCC", "esp32:3V3", "red", [] ],
-  [ "lcd:GND", "esp32:GND.1", "black", [] ],
-  [ "lcd:SDA", "esp32:D21", "blue", [] ],
-  [ "lcd:SCL", "esp32:D22", "yellow", [] ],
+
+  [ "oled:VCC", "esp32:3V3", "red", [] ],
+  [ "oled:GND", "esp32:GND.1", "black", [] ],
+  [ "oled:SDA", "esp32:D21", "blue", [] ],
+  [ "oled:SCL", "esp32:D22", "yellow", [] ],
 
   [ "buzzer:1", "esp32:D18", "purple", [] ],
   [ "buzzer:2", "esp32:GND.1", "black", [] ],

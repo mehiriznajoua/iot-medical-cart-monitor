@@ -2,7 +2,8 @@
 #include <Wire.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <LiquidCrystal_I2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <SdFat.h>
 #include <RtcDS1307.h>
 #include <WiFi.h>
@@ -38,8 +39,10 @@
 OneWire oneWire(TEMP_PIN);
 DallasTemperature sensors(&oneWire);
 
-//LCD setup
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+//OLED setup
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 //wifi + MQTT setup
 WiFiClient wifiClient;
@@ -97,6 +100,24 @@ void setup() {
         rtc.SetDateTime(RtcDateTime(__DATE__, __TIME__));
     }
 
+    // START OLED
+    if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        Serial.println("SSD1306 failed!");
+        while(1);
+    }
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println("Medical Cart");
+    display.setCursor(0, 10);
+    display.println("Starting...");
+    display.display();
+    delay(2000);
+    display.clearDisplay();
+    display.display();
+
     // Connect to WiFi and MQTT
     connectMQTT();
 
@@ -105,28 +126,18 @@ void setup() {
 
     // Starting SD card
     SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-    if (!sd.begin(SD_CS)) {
+    if (!sd.begin(SdSpiConfig(SD_CS, DEDICATED_SPI, SD_SCK_MHZ(4)))) {
         Serial.println("SD card failed!");
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("SD CARD ERROR");
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.println("SD CARD ERROR");
+        display.display();
     } else {
         Serial.println("SD card ready.");
         logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END);
         logFile.println("timestamp, temperature, door, state");
         logFile.close();
     }
-
-    //starting LCD
-    lcd.init();
-    lcd.backlight();
-    lcd.setCursor(0, 0);
-    lcd.print("Medical Cart");
-    lcd.setCursor(0, 1);
-    lcd.print("Starting...");
-
-    delay(2000); //to show the message briefly only at the beginning, won't be anymore delay()
-    lcd.clear();
 
     Serial.println("System ready.");
 
@@ -138,6 +149,52 @@ void setup() {
 //STATE MACHINE
 enum State { NORMAL, ALERTE_TEMP, ALERTE_PORTE, PANNE_CAPTEUR };
 State currentState = NORMAL;
+
+void updateOLED(float temp, bool doorOpen)
+{
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+
+    switch(currentState)
+    {
+        case NORMAL:
+            display.setCursor(0, 0);
+            display.print("Temp: ");
+            display.print(temp, 1);
+            display.println(" C");
+            display.setCursor(0, 16);
+            display.println(doorOpen ? "Door: OPEN" : "Door: CLOSED");
+            break;
+
+        case ALERTE_TEMP:
+            display.setTextSize(2);
+            display.setCursor(0, 0);
+            display.println("TEMP!");
+            display.setTextSize(1);
+            display.setCursor(0, 20);
+            display.print(temp, 1);
+            display.println(" C");
+            break;
+
+        case ALERTE_PORTE:
+            display.setTextSize(2);
+            display.setCursor(0, 0);
+            display.println("DOOR!");
+            display.setTextSize(1);
+            display.setCursor(0, 20);
+            display.println(">10 sec open");
+            break;
+
+        case PANNE_CAPTEUR:
+            display.setTextSize(2);
+            display.setCursor(0, 0);
+            display.println("SENSOR");
+            display.println("FAULT!");
+            break;
+    }
+    display.display();
+}
 
 //TIMING VARIABLES
 unsigned long lastReadTime = 0;
@@ -204,36 +261,8 @@ void loop() {
         Serial.print("DOOR PIN RAW: ");
         Serial.println(digitalRead(DOOR_PIN));
 
-        //LCD REACTION
-        lcd.clear();
-        lcd.setCursor(0, 0);
-
-        if (currentState == PANNE_CAPTEUR) {
-            lcd.print("SENSOR FAULT!");
-            lcd.setCursor(0, 1);
-            lcd.print("Check wiring");
-        } 
-        else if (currentState == ALERTE_TEMP) {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C !");
-            lcd.setCursor(0, 1);
-            lcd.print("TEMP ALERT");
-
-        }
-        else if (currentState == ALERTE_PORTE) {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C OK");
-            lcd.setCursor(0, 1);
-            lcd.print("DOOR OPEN >10s!");
-
-        } 
-        else {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C OK");
-            lcd.setCursor(0, 1);
-            if (doorOpen) {
-                lcd.print("Door: OPEN");     // Door open but <10s, no alert yet
-            } else {
-                lcd.print("Door: CLOSED");
-            }   
-        }
+        //OLED REACTION
+        updateOLED(temp, doorOpen);
 
         //SD CARD LOGGING
         String timestamp = getTimestamp();
