@@ -7,8 +7,8 @@
 #include <RtcDS1307.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include <ThingSpeak.h>
-
+#include <esp_sleep.h>
+#include <ArduinoJson.h>
 
 //pin definitions
 #define TEMP_PIN 4   // DS18B20 data line
@@ -20,7 +20,7 @@
 #define TEMP_NORMAL_MAX 8.0
 
 //timing
-#define READ_INTERVAL 2000   // Read sensors every 2 seconds
+#define READ_INTERVAL 5000   // Read sensors every 5 seconds
 #define DOOR_ALERT_TIME 10000  // Door open alert after 10 seconds
 
 //wifi + MQTT definitions
@@ -30,9 +30,10 @@
 #define MQTT_PORT 1883
 #define MQTT_TOPIC "medicalcart/trolley01/data"
 
-//ThingSpeak definitions
-#define THINGSPEAK_CHANNEL  3399583
-#define THINGSPEAK_API_KEY  "JKDC66IXQVNFB47Q"
+
+// SD timing
+#define LOG_INTERVAL 20000
+unsigned long lastLogTime   = 0;    // SD logging timer
 
 //sensor setup
 OneWire oneWire(TEMP_PIN);
@@ -58,6 +59,7 @@ bool buzzState = false;
 
 SdFat sd;
 SdFile logFile;
+bool sdOK = false; // needed in the SD card fail section
 
 RtcDS1307<TwoWire> rtc(Wire);
 
@@ -68,18 +70,59 @@ void IRAM_ATTR doorISR() {
   doorJustOpened = true;
 }
 
-void connectMQTT() {
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.print(".");
+// light sleep function
+
+void enterLightSleep() {
+
+    Serial.println("Entering Light Sleep...");
+
+    // Wake up after READ_INTERVAL milliseconds
+    esp_sleep_enable_timer_wakeup((uint64_t)READ_INTERVAL * 1000);
+
+    Serial.flush();
+
+    esp_light_sleep_start();
+
+    Serial.println("ESP32 woke up");
+}
+
+void connectMQTT()
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+        while (WiFi.status() != WL_CONNECTED)
+        {
+            delay(500);
+            Serial.print(".");
+        }
+
+        Serial.println("\nWiFi connected");
     }
-    Serial.println("WiFi connected");
+
     mqtt.setServer(MQTT_BROKER, MQTT_PORT);
-    mqtt.connect("MedicalCartMonitor");
+
+    while (!mqtt.connected())
+    {
+        Serial.println("Connecting MQTT...");
+
+        if (mqtt.connect("MedicalCartMonitor"))
+        {
+            Serial.println("MQTT connected");
+        }
+        else
+        {
+            delay(1000);
+        }
+    }
 }
 
 
 void setup() {
+
+    setCpuFrequencyMhz(80);   // Reduce CPU from 240MHz to 80MHz(for power consumption)
+    btStop();    
     
     Serial.begin(115200);
 
@@ -93,24 +136,38 @@ void setup() {
     // Start RTC
     Wire.begin(21, 22);
     rtc.Begin();
-    if (!rtc.IsDateTimeValid()) {
-        rtc.SetDateTime(RtcDateTime(__DATE__, __TIME__));
-    }
+    // --- TEMP DEBUG: remove after confirming ---
+    RtcDateTime now = rtc.GetDateTime();
+    Serial.print("RTC time: ");
+    Serial.print(now.Year());  Serial.print("-");
+    Serial.print(now.Month()); Serial.print("-");
+    Serial.print(now.Day());   Serial.print(" ");
+    Serial.print(now.Hour());  Serial.print(":");
+    Serial.print(now.Minute());Serial.print(":");
+    Serial.println(now.Second());
+
+if (!rtc.IsDateTimeValid()) {
+    Serial.println("RTC: time not valid, setting now...");
+    rtc.SetDateTime(RtcDateTime(__DATE__, __TIME__));
+} else {
+    Serial.println("RTC: time is valid");
+}
+// --- END TEMP DEBUG ---
 
     // Connect to WiFi and MQTT
     connectMQTT();
 
-    // Start ThingSpeak
-    ThingSpeak.begin(wifiClient);
-
     // Starting SD card
     SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
     if (!sd.begin(SD_CS)) {
-        Serial.println("SD card failed!");
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("SD CARD ERROR");
-    } else {
+    Serial.println("SD card failed!");
+    sdOK = false;
+    // publish an MQTT alert immediately
+    if (mqtt.connected()) {
+        mqtt.publish(MQTT_TOPIC,
+            "{\"id\":\"trolley01\",\"state\":\"PANNE_SD\"}");
+    }} else {
+        sdOK = true;
         Serial.println("SD card ready.");
         logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END);
         logFile.println("timestamp, temperature, door, state");
@@ -132,6 +189,8 @@ void setup() {
 
     //door interruption
     attachInterrupt(digitalPinToInterrupt(DOOR_PIN), doorISR, CHANGE);
+    // Wake up when door pin becomes HIGH
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)DOOR_PIN, 1);
 
 }
 
@@ -139,12 +198,76 @@ void setup() {
 enum State { NORMAL, ALERTE_TEMP, ALERTE_PORTE, PANNE_CAPTEUR };
 State currentState = NORMAL;
 
+void updateLCD(float temp, bool doorOpen)
+{
+    lcd.setCursor(0,0);
+    lcd.print("                ");
+    lcd.setCursor(0,1);
+    lcd.print("                ");
+
+    lcd.setCursor(0,0);
+
+    switch(currentState)
+    {
+        case NORMAL:
+
+            lcd.print("Temp:");
+            lcd.print(temp,1);
+            lcd.print(" C");
+
+            lcd.setCursor(0,1);
+
+            if(doorOpen)
+                lcd.print("Door OPEN");
+            else
+                lcd.print("Door CLOSED");
+
+            break;
+
+
+        case ALERTE_TEMP:
+
+            lcd.print("TEMP ALERT!");
+
+            lcd.setCursor(0,1);
+            lcd.print(temp,1);
+            lcd.print(" C");
+
+            break;
+
+
+        case ALERTE_PORTE:
+
+            lcd.print("DOOR ALERT");
+
+            lcd.setCursor(0,1);
+            lcd.print(">10 sec");
+
+            break;
+
+
+        case PANNE_CAPTEUR:
+
+            lcd.print("SENSOR FAULT");
+
+            lcd.setCursor(0,1);
+            lcd.print("Check DS18B20");
+
+            break;
+    }
+}
+
 //TIMING VARIABLES
 unsigned long lastReadTime = 0;
 unsigned long doorOpenTime = 0;
 bool doorWasOpen           = false;
 
 String getTimestamp() {
+    if (!rtc.IsDateTimeValid()) {
+        Serial.println("RTC invalid — using fallback timestamp");
+        return String("0000-00-00 00:00:00");  // something is wrong with the RTC
+    }
+
     RtcDateTime now = rtc.GetDateTime();
     char buf[20];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d",
@@ -154,6 +277,14 @@ String getTimestamp() {
 }
 
 void loop() {
+    
+    if (WiFi.status() != WL_CONNECTED) {
+    connectMQTT();
+    }
+
+    if (!mqtt.connected()) {
+    mqtt.connect("MedicalCartMonitor");
+    }
     
     unsigned long now = millis();
     if (now - lastReadTime >= READ_INTERVAL) {
@@ -182,8 +313,32 @@ void loop() {
         //DETERMINE STATE
         bool tempAlert = (temp < TEMP_NORMAL_MIN || temp > TEMP_NORMAL_MAX);
 
-         if (temp == -127.0) {
-            currentState = PANNE_CAPTEUR;
+        if (temp == -127.0) {
+        currentState = PANNE_CAPTEUR;
+
+        // FAIL-SAFE: sound the buzzer immediately
+        digitalWrite(BUZZER_PIN, HIGH);
+
+        // FAIL-SAFE: publish critical alert via MQTT
+        StaticJsonDocument<200> doc;
+        doc["id"]    = "trolley01";
+        doc["temp"]  = "ERROR";
+        doc["door"]  = doorOpen ? "OPEN" : "CLOSED";
+        doc["state"] = "PANNE_CAPTEUR";
+
+        char message[200];
+        serializeJson(doc, message);
+
+        mqtt.publish(MQTT_TOPIC, message);
+
+        // FAIL-SAFE: log the fault to SD card
+        if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
+        logFile.print(getTimestamp());
+        logFile.println(", -127, -, PANNE_CAPTEUR");
+        logFile.close();
+    }
+
+
         } else if (tempAlert) {
             currentState = ALERTE_TEMP;
         } else if (doorAlert) {
@@ -205,67 +360,58 @@ void loop() {
         Serial.println(digitalRead(DOOR_PIN));
 
         //LCD REACTION
-        lcd.clear();
-        lcd.setCursor(0, 0);
-
-        if (currentState == PANNE_CAPTEUR) {
-            lcd.print("SENSOR FAULT!");
-            lcd.setCursor(0, 1);
-            lcd.print("Check wiring");
-        } 
-        else if (currentState == ALERTE_TEMP) {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C !");
-            lcd.setCursor(0, 1);
-            lcd.print("TEMP ALERT");
-
-        }
-        else if (currentState == ALERTE_PORTE) {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C OK");
-            lcd.setCursor(0, 1);
-            lcd.print("DOOR OPEN >10s!");
-
-        } 
-        else {
-            lcd.print("Temp: "); lcd.print(temp); lcd.print(" C OK");
-            lcd.setCursor(0, 1);
-            if (doorOpen) {
-                lcd.print("Door: OPEN");     // Door open but <10s, no alert yet
-            } else {
-                lcd.print("Door: CLOSED");
-            }   
-        }
+        updateLCD(temp, doorOpen);
 
         //SD CARD LOGGING
         String timestamp = getTimestamp();
+        // Reconnect WiFi if sleep disconnected it
+        if (WiFi.status() != WL_CONNECTED) {
+          connectMQTT();
+          }
+        // Reconnect MQTT if needed
+        if (!mqtt.connected()) {
+          mqtt.connect("MedicalCartMonitor");
+        }
+        // rest of SD logging
         String stateStr;
         if (currentState == NORMAL)         stateStr = "NORMAL";
         else if (currentState == ALERTE_TEMP)  stateStr = "ALERTE TEMP";
         else if (currentState == ALERTE_PORTE) stateStr = "ALERTE PORTE";
         else if (currentState == PANNE_CAPTEUR) stateStr = "PANNE CAPTEUR";
-
-        if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
-            logFile.print(timestamp);
-            logFile.print(", ");
-            logFile.print(temp);
-            logFile.print(", ");
-            logFile.print(doorOpen ? "OPEN" : "CLOSED");
-            logFile.print(", ");
-            logFile.println(stateStr);
-            logFile.close();
+        if (sdOK && currentState != PANNE_CAPTEUR) {
+          if (now - lastLogTime >= LOG_INTERVAL) {
+            lastLogTime = now;  
+            if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
+              logFile.print(timestamp);
+              logFile.print(", ");
+              logFile.print(temp);
+              logFile.print(", ");
+              logFile.print(doorOpen ? "OPEN" : "CLOSED");
+              logFile.print(", ");
+              logFile.println(stateStr);
+              logFile.close();
+          }}
         } else {
             Serial.println("SD write failed!");
         }
 
         //MQTT ALERT
-        if (currentState != NORMAL) {
+        if (currentState != NORMAL && currentState != PANNE_CAPTEUR) {
             if (!mqtt.connected()) {
                 mqtt.connect("MedicalCartMonitor");
             }
-            String message = "{\"id\":\"trolley01\""
-                            ",\"temp\":" + String(temp) +
-                            ",\"door\":\"" + (doorOpen ? "OPEN" : "CLOSED") + "\""
-                            ",\"state\":\"" + stateStr + "\"}";
-            mqtt.publish(MQTT_TOPIC, message.c_str());
+            StaticJsonDocument<256> doc;
+
+            doc["id"] = "trolley01";
+            doc["temperature"] = temp;
+            doc["door"] = doorOpen ? "OPEN" : "CLOSED";
+            doc["state"] = stateStr;
+            doc["timestamp"] = timestamp;
+
+            char buffer[256];
+            serializeJson(doc, buffer);
+
+            mqtt.publish(MQTT_TOPIC, buffer);
         }
         mqtt.loop();
 
@@ -276,6 +422,8 @@ void loop() {
     if (currentState == NORMAL) {
         digitalWrite(BUZZER_PIN, LOW);
         buzzState = false;
+        // Save power
+        enterLightSleep();
     } 
     else {
         if (now - lastBuzzTime >= 500) {
