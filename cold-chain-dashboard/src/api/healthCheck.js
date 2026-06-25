@@ -9,10 +9,16 @@ export async function fetchHealthCheck(url) {
 }
 
 export function isLiveDataFresh(timestamp, thresholdSec) {
-  const ts = Number(timestamp);
-  if (!timestamp || Number.isNaN(ts)) return false;
-
-  const normalizedTs = ts > 1e12 ? Math.floor(ts / 1000) : ts;
-  const nowSec = Math.floor(Date.now() / 1000);
-  return nowSec - normalizedTs <= thresholdSec;
+  if (!timestamp) return false;
+  
+  let date;
+  if (typeof timestamp === 'string') {
+    date = new Date(timestamp.replace(' ', 'T'));
+  } else {
+    const ts = Number(timestamp);
+    date = ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+  }
+  
+  if (isNaN(date.getTime())) return false;
+  return (Date.now() - date.getTime()) / 1000 <= thresholdSec;
 }

@@ -21,8 +21,9 @@ export const STATE_DESCRIPTIONS = {
 };
 
 export function getDoorLabel(door) {
-  const value = Number(door);
-  return DOOR_LABELS[value] || 'UNKNOWN';
+  if (door === 'OPEN' || door === 1 || door === '1') return 'OPEN';
+  if (door === 'CLOSED' || door === 0 || door === '0') return 'CLOSED';
+  return 'UNKNOWN';
 }
 
 export function getStateCode(state) {
@@ -63,15 +64,13 @@ export function isActiveAlertState(stateCode) {
 
 export function formatTimestamp(timestamp) {
   if (!timestamp) return '—';
-  const date = new Date(Number(timestamp) * 1000);
+  const date = typeof timestamp === 'string' 
+    ? new Date(timestamp.replace(' ', 'T'))
+    : new Date(Number(timestamp) * 1000);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
   });
 }
 

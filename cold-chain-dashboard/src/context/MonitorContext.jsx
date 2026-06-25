@@ -78,6 +78,7 @@ export function MonitorProvider({ children }) {
 
     try {
       cartData = await fetchCartStatus(cartUrl);
+      if (Array.isArray(cartData)) cartData = cartData[0];
       nodeRedOnline = true;
       setConnected(true);
       setLiveData(cartData);
@@ -99,14 +100,15 @@ export function MonitorProvider({ children }) {
 
       lastStateRef.current = stateCode;
 
+      const parsedTime = new Date(cartData.timestamp.replace(' ', 'T'));
       const point = {
-        time: new Date(Number(cartData.timestamp) * 1000).toLocaleTimeString('en-GB', {
+        time: parsedTime.toLocaleTimeString('en-GB', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
         }),
         temperature: Number(cartData.temperature),
-        timestamp: Number(cartData.timestamp),
+        timestamp: parsedTime.getTime(),
       };
 
       setTemperatureHistory((prev) => [...prev, point].slice(-120));
