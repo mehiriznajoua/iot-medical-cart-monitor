@@ -53,6 +53,14 @@ export function isAlertState(stateCode) {
   return stateCode === 'ALERTE_TEMP' || stateCode === 'ALERTE_PORTE';
 }
 
+export function isActiveAlertState(stateCode) {
+  return (
+    stateCode === 'ALERTE_TEMP' ||
+    stateCode === 'ALERTE_PORTE' ||
+    stateCode === 'PANNE_CAPTEUR'
+  );
+}
+
 export function formatTimestamp(timestamp) {
   if (!timestamp) return '—';
   const date = new Date(Number(timestamp) * 1000);

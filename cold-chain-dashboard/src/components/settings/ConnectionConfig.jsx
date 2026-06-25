@@ -4,7 +4,8 @@ import { Save } from 'lucide-react';
 export default function ConnectionConfig({ config, onSave }) {
   const [form, setForm] = useState({
     cartStatusUrl: config.cartStatusUrl || '',
-    grafanaEmbedUrl: config.grafanaEmbedUrl || '',
+    mqttHealthUrl: config.mqttHealthUrl || '',
+    influxHealthUrl: config.influxHealthUrl || '',
   });
   const [saved, setSaved] = useState(false);
 
@@ -37,15 +38,34 @@ export default function ConnectionConfig({ config, onSave }) {
         </div>
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Grafana Embed URL
+            MQTT Health URL
           </label>
           <input
             type="text"
-            value={form.grafanaEmbedUrl}
-            onChange={(e) => setForm({ ...form, grafanaEmbedUrl: e.target.value })}
-            placeholder="https://your-grafana/d/.../panel/..."
+            value={form.mqttHealthUrl}
+            onChange={(e) => setForm({ ...form, mqttHealthUrl: e.target.value })}
+            placeholder="/api/mqtt-health"
             className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
+          <p className="mt-2 text-xs text-slate-500">
+            Optional Node-RED health endpoint. If unavailable, MQTT status is inferred from
+            fresh trolley data.
+          </p>
+        </div>
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            InfluxDB Health URL
+          </label>
+          <input
+            type="text"
+            value={form.influxHealthUrl}
+            onChange={(e) => setForm({ ...form, influxHealthUrl: e.target.value })}
+            placeholder="/influx/health"
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            InfluxDB 2.x uses /health. For InfluxDB 1.x, use /influx/ping instead.
+          </p>
         </div>
         <button
           type="submit"

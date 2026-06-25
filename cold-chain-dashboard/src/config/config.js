@@ -1,6 +1,9 @@
 export const API_CONFIG = {
   cartStatusUrl: import.meta.env.VITE_CART_STATUS_URL || '/api/cart-status',
+  mqttHealthUrl: import.meta.env.VITE_MQTT_HEALTH_URL || '/api/mqtt-health',
+  influxHealthUrl: import.meta.env.VITE_INFLUX_HEALTH_URL || '/influx/health',
   pollIntervalMs: 5000,
+  staleDataThresholdSec: 30,
 };
 
 export const LIVE_TROLLEY_ID = 'trolley01';
@@ -13,7 +16,8 @@ export const STORAGE_KEYS = {
 
 export const DEFAULT_APP_CONFIG = {
   cartStatusUrl: '/api/cart-status',
-  grafanaEmbedUrl: '',
+  mqttHealthUrl: '/api/mqtt-health',
+  influxHealthUrl: '/influx/health',
 };
 
 export const DEFAULT_TROLLEY_REGISTRY = [

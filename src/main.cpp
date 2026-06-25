@@ -296,7 +296,7 @@ void loop() {
             digitalWrite(BUZZER_PIN, HIGH);
 
             // FAIL-SAFE: publish critical alert via MQTT
-            JsonDocument doc;
+            DynamicJsonDocument doc(256);
             doc["id"]    = "trolley01";
             doc["temp"]  = "ERROR";
             doc["door"]  = doorOpen ? "OPEN" : "CLOSED";
@@ -330,9 +330,9 @@ void loop() {
         Serial.print(" C | Door: "); Serial.println(doorOpen ? "OPEN" : "CLOSED");
         Serial.print("State: ");
         if (currentState == NORMAL)          Serial.println("NORMAL");
-        if (currentState == ALERTE_TEMP)     Serial.println("ALERTE TEMP");
-        if (currentState == ALERTE_PORTE)    Serial.println("ALERTE PORTE");
-        if (currentState == PANNE_CAPTEUR)   Serial.println("PANNE CAPTEUR");
+        if (currentState == ALERTE_TEMP)     Serial.println("ALERTE_TEMP");
+        if (currentState == ALERTE_PORTE)    Serial.println("ALERTE_PORTE");
+        if (currentState == PANNE_CAPTEUR)   Serial.println("PANNE_CAPTEUR");
     
         Serial.print("DOOR PIN RAW: ");
         Serial.println(digitalRead(DOOR_PIN));
@@ -355,9 +355,9 @@ void loop() {
         // rest of SD logging
         String stateStr;
         if (currentState == NORMAL)         stateStr = "NORMAL";
-        else if (currentState == ALERTE_TEMP)  stateStr = "ALERTE TEMP";
-        else if (currentState == ALERTE_PORTE) stateStr = "ALERTE PORTE";
-        else if (currentState == PANNE_CAPTEUR) stateStr = "PANNE CAPTEUR";
+        else if (currentState == ALERTE_TEMP)  stateStr = "ALERTE_TEMP";
+        else if (currentState == ALERTE_PORTE) stateStr = "ALERTE_PORTE";
+        else if (currentState == PANNE_CAPTEUR) stateStr = "PANNE_CAPTEUR";
         if (currentState != PANNE_CAPTEUR) {
             if (now - lastLogTime >= LOG_INTERVAL) {
             lastLogTime = now;  
@@ -379,7 +379,7 @@ void loop() {
 
         //MQTT PUBLISH
         reconnectMQTT();
-        JsonDocument doc;
+        DynamicJsonDocument doc(256);
         doc["id"] = "trolley01";
         doc["temperature"] = temp;
         doc["door"] = doorOpen ? "OPEN" : "CLOSED";

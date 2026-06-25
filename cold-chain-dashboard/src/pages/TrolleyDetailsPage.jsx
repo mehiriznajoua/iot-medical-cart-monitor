@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Clock, DoorOpen, Thermometer, TriangleAlert } from 'lucide-react';
 import DeviceInfo from '../components/trolley/DeviceInfo.jsx';
-import GrafanaPanel from '../components/trolley/GrafanaPanel.jsx';
 import RecentAlerts from '../components/trolley/RecentAlerts.jsx';
 import TemperatureChart from '../components/trolley/TemperatureChart.jsx';
 import { useMonitor } from '../context/MonitorContext.jsx';
@@ -16,8 +15,7 @@ import {
 
 export default function TrolleyDetailsPage() {
   const { id } = useParams();
-  const { trolleys, liveData, connected, alerts, temperatureHistory, config } =
-    useMonitor();
+  const { trolleys, liveData, connected, alerts, temperatureHistory } = useMonitor();
   const trolley = trolleys.find((item) => item.id === id);
 
   const chartData = useMemo(() => {
@@ -93,25 +91,11 @@ export default function TrolleyDetailsPage() {
         />
       </div>
 
-      {trolley.online && config.grafanaEmbedUrl ? (
-        <GrafanaPanel url={config.grafanaEmbedUrl} />
-      ) : (
+      {trolley.online && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900">Temperature History</h3>
           <p className="mt-1 text-sm text-slate-500">
             Live readings stored in memory while the dashboard is running
-          </p>
-          <div className="mt-6">
-            <TemperatureChart data={chartData} />
-          </div>
-        </div>
-      )}
-
-      {trolley.online && config.grafanaEmbedUrl && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Session Temperature History</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Readings collected during this dashboard session
           </p>
           <div className="mt-6">
             <TemperatureChart data={chartData} />

@@ -4,7 +4,7 @@ import SystemHealth from '../components/dashboard/SystemHealth.jsx';
 import TrolleyGrid from '../components/dashboard/TrolleyGrid.jsx';
 
 export default function DashboardPage() {
-  const { stats, trolleys, connected } = useMonitor();
+  const { stats, trolleys, systemHealth } = useMonitor();
 
   return (
     <div className="space-y-8">
@@ -16,7 +16,7 @@ export default function DashboardPage() {
       </div>
 
       <KpiCards stats={stats} />
-      <SystemHealth connected={connected} />
+      <SystemHealth health={systemHealth} />
       <TrolleyGrid trolleys={trolleys} />
     </div>
   );

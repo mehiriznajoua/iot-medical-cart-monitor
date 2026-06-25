@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { fetchCartStatus } from '../api/cartStatus.js';
+import { fetchHealthCheck, isLiveDataFresh } from '../api/healthCheck.js';
 import {
   API_CONFIG,
   LIVE_TROLLEY_ID,
@@ -19,10 +20,33 @@ import { loadAlertHistory, saveAlertHistory } from '../utils/alertHistory.js';
 import {
   buildAlertFromState,
   getStateCode,
+  isActiveAlertState,
   isAlertState,
 } from '../utils/formatters.js';
 
 const MonitorContext = createContext(null);
+
+const DEFAULT_SYSTEM_HEALTH = {
+  nodeRed: false,
+  mqtt: false,
+  influx: false,
+};
+
+async function checkMqttHealth(mqttHealthUrl, cartData, thresholdSec) {
+  if (mqttHealthUrl) {
+    try {
+      await fetchHealthCheck(mqttHealthUrl);
+      return true;
+    } catch (error) {
+      const status = error.response?.status;
+      if (status && status !== 404) {
+        return false;
+      }
+    }
+  }
+
+  return isLiveDataFresh(cartData?.timestamp, thresholdSec);
+}
 
 function shouldRecordAlert(stateCode, prevState) {
   if (prevState === null) {
@@ -36,6 +60,7 @@ export function MonitorProvider({ children }) {
   const { config, updateConfig } = useAppConfig();
 
   const [connected, setConnected] = useState(false);
+  const [systemHealth, setSystemHealth] = useState(DEFAULT_SYSTEM_HEALTH);
   const [liveData, setLiveData] = useState(null);
   const [alerts, setAlerts] = useState(() => loadAlertHistory());
   const [temperatureHistory, setTemperatureHistory] = useState([]);
@@ -43,19 +68,27 @@ export function MonitorProvider({ children }) {
   const lastStateRef = useRef(null);
 
   const poll = useCallback(async () => {
-    const url = config.cartStatusUrl || API_CONFIG.cartStatusUrl;
-    try {
-      const data = await fetchCartStatus(url);
-      setConnected(true);
-      setLiveData(data);
+    const cartUrl = config.cartStatusUrl || API_CONFIG.cartStatusUrl;
+    const mqttHealthUrl = config.mqttHealthUrl || API_CONFIG.mqttHealthUrl;
+    const influxHealthUrl = config.influxHealthUrl || API_CONFIG.influxHealthUrl;
+    const thresholdSec = API_CONFIG.staleDataThresholdSec;
 
-      const stateCode = getStateCode(data.state);
+    let cartData = null;
+    let nodeRedOnline = false;
+
+    try {
+      cartData = await fetchCartStatus(cartUrl);
+      nodeRedOnline = true;
+      setConnected(true);
+      setLiveData(cartData);
+
+      const stateCode = getStateCode(cartData.state);
       const prevState = lastStateRef.current;
       const trolley = registry.find((t) => t.id === LIVE_TROLLEY_ID);
 
       if (trolley && shouldRecordAlert(stateCode, prevState)) {
-        const alert = buildAlertFromState(trolley, stateCode, data.timestamp, {
-          temperature: data.temperature,
+        const alert = buildAlertFromState(trolley, stateCode, cartData.timestamp, {
+          temperature: cartData.temperature,
         });
         setAlerts((prev) => {
           const next = [alert, ...prev.filter((a) => a.id !== alert.id)].slice(0, 200);
@@ -67,13 +100,13 @@ export function MonitorProvider({ children }) {
       lastStateRef.current = stateCode;
 
       const point = {
-        time: new Date(Number(data.timestamp) * 1000).toLocaleTimeString('en-GB', {
+        time: new Date(Number(cartData.timestamp) * 1000).toLocaleTimeString('en-GB', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
         }),
-        temperature: Number(data.temperature),
-        timestamp: Number(data.timestamp),
+        temperature: Number(cartData.temperature),
+        timestamp: Number(cartData.timestamp),
       };
 
       setTemperatureHistory((prev) => [...prev, point].slice(-120));
@@ -86,9 +119,30 @@ export function MonitorProvider({ children }) {
         };
       });
     } catch {
+      nodeRedOnline = false;
       setConnected(false);
     }
-  }, [config.cartStatusUrl, registry]);
+
+    const [mqttOnline, influxOnline] = await Promise.all([
+      nodeRedOnline
+        ? checkMqttHealth(mqttHealthUrl, cartData, thresholdSec)
+        : Promise.resolve(false),
+      fetchHealthCheck(influxHealthUrl)
+        .then(() => true)
+        .catch(() => false),
+    ]);
+
+    setSystemHealth({
+      nodeRed: nodeRedOnline,
+      mqtt: mqttOnline,
+      influx: influxOnline,
+    });
+  }, [
+    config.cartStatusUrl,
+    config.mqttHealthUrl,
+    config.influxHealthUrl,
+    registry,
+  ]);
 
   usePolling(poll, API_CONFIG.pollIntervalMs);
 
@@ -131,7 +185,7 @@ export function MonitorProvider({ children }) {
     const online = trolleys.filter((t) => t.online).length;
     const offline = trolleys.length - online;
     const activeAlerts = trolleys.filter(
-      (t) => t.online && t.status !== 'NORMAL',
+      (t) => t.online && isActiveAlertState(t.status),
     ).length;
 
     return {
@@ -145,6 +199,7 @@ export function MonitorProvider({ children }) {
   const value = useMemo(
     () => ({
       connected,
+      systemHealth,
       liveData,
       trolleys,
       registry,
@@ -160,6 +215,7 @@ export function MonitorProvider({ children }) {
     }),
     [
       connected,
+      systemHealth,
       liveData,
       trolleys,
       registry,

@@ -11,6 +11,11 @@ export default defineConfig({
         target: 'http://localhost:1880',
         changeOrigin: true,
       },
+      '/influx': {
+        target: 'http://localhost:8086',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/influx/, ''),
+      },
     },
   },
 });
