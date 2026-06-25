@@ -56,7 +56,7 @@ export default function AlertCenterPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black tracking-tight" style={{color: '#1F4E79'}}>Alert Center</h2>
+          <h2 className="text-4xl tracking-tight" style={{color: '#152b5a', fontWeight: 550,}}>Alert Center</h2>
           <p className="mt-1 text-sm text-slate-500">
             Monitor and review cold-chain alert events
           </p>

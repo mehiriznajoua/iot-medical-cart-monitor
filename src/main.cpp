@@ -15,6 +15,7 @@
 #define TEMP_PIN 4   // DS18B20 data line
 #define DOOR_PIN 5   // Reed Switch
 #define BUZZER_PIN 18  // Buzzer
+#define MAINT_BTN_PIN 19 //maintenance button
 
 //temperature threshold
 #define TEMP_NORMAL_MIN 2.0
@@ -45,6 +46,11 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 //wifi + MQTT setup
 WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
+
+String currentUser = "UNKNOWN";      // last user  
+float  lastTemp = 0;
+unsigned long lastAuthTime = 0;     // when a valid badge was last scanned
+bool   accessPreAuthorized = false; // scan result
 
 
 //Buzzer setup
@@ -144,6 +150,7 @@ void setup() {
     //setting pin modes
     pinMode(DOOR_PIN, INPUT_PULLUP);
     pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(MAINT_BTN_PIN, INPUT_PULLUP);
 
     //starting temp sensor
     sensors.begin();
@@ -192,7 +199,7 @@ void setup() {
 }
 
 //STATE MACHINE
-enum State { NORMAL, ALERTE_TEMP, ALERTE_PORTE, PANNE_CAPTEUR };
+enum State { NORMAL, ALERTE_TEMP, ALERTE_PORTE, PANNE_CAPTEUR, MAINTENANCE };
 State currentState = NORMAL;
 
 //update LCD
@@ -243,6 +250,11 @@ unsigned long lastReadTime = 0;
 unsigned long doorOpenTime = 0;
 bool doorWasOpen = false;
 
+unsigned long btnPressStart    = 0;
+bool          btnWasPressed    = false;
+bool          maintenanceMode  = false;
+unsigned long maintStartTime   = 0;
+
 String getTimestamp() {
     RtcDateTime now = rtc.GetDateTime();
     char buf[20];
@@ -252,7 +264,85 @@ String getTimestamp() {
     return String(buf);
 }
 
+void handleMaintenanceButton() {
+    bool btnPressed = (digitalRead(MAINT_BTN_PIN) == LOW);
+
+    if (btnPressed && !btnWasPressed) {
+        // Button just pressed — start timer
+        btnPressStart = millis();
+        btnWasPressed = true;
+    }
+    else if (!btnPressed && btnWasPressed) {
+        // Button released
+        btnWasPressed = false;
+        btnPressStart = 0;
+    }
+    else if (btnPressed && btnWasPressed) {
+        // Button held — check 3 second threshold
+        if (millis() - btnPressStart >= 3000) {
+            if (!maintenanceMode) {
+                // Enter maintenance
+                maintenanceMode = true;
+                maintStartTime  = millis();
+                currentState    = MAINTENANCE;
+
+                lcd.clear();
+                lcd.setCursor(0, 0); lcd.print("MAINTENANCE MODE");
+                lcd.setCursor(0, 1); lcd.print("Alerts suppressed");
+
+                // Log to SD
+                if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
+                    logFile.print(getTimestamp());
+                    logFile.println(", -, -, MAINTENANCE_START");
+                    logFile.close();
+                }
+
+                // Publish to MQTT
+                String msg = "{\"id\":\"trolley01\",\"state\":\"MAINTENANCE\",\"timestamp\":\"" + getTimestamp() + "\"}";
+                mqtt.publish(MQTT_TOPIC, msg.c_str());
+
+                Serial.println("MAINTENANCE MODE ON");
+                btnPressStart = millis(); // reset to avoid re-triggering
+            } else {
+                // Exit maintenance
+                unsigned long duration = (millis() - maintStartTime) / 1000;
+                maintenanceMode = false;
+                currentState    = NORMAL;
+
+                lcd.clear();
+                lcd.setCursor(0, 0); lcd.print("MAINTENANCE END");
+                lcd.setCursor(0, 1); lcd.print("Duration: " + String(duration) + "s");
+                delay(2000);
+
+                // Log duration to SD
+                if (logFile.open("coldchain.csv", O_RDWR | O_CREAT | O_AT_END)) {
+                    logFile.print(getTimestamp());
+                    logFile.print(", -, -, MAINTENANCE_END_");
+                    logFile.print(duration);
+                    logFile.println("s");
+                    logFile.close();
+                }
+
+                // Publish to MQTT
+                String msg = "{\"id\":\"trolley01\",\"state\":\"NORMAL\",\"timestamp\":\"" + getTimestamp() + "\"}";
+                mqtt.publish(MQTT_TOPIC, msg.c_str());
+
+                Serial.println("MAINTENANCE MODE OFF — duration: " + String(duration) + "s");
+                btnPressStart = millis();
+            }
+        }
+    }
+}
+
 void loop() {
+
+    handleMaintenanceButton();
+
+    // Skip all sensor reading and alerts during maintenance
+    if (maintenanceMode) {
+        mqtt.loop();
+        return;
+    }
 
     if (WiFi.status() != WL_CONNECTED) {
     connectMQTT();

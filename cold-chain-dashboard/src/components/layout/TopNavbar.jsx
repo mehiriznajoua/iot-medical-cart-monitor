@@ -24,7 +24,7 @@ export default function TopNavbar() {
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-4 px-8 py-5">
         <div>
-          <h1 className="text-5xl font-black tracking-tight" style={{color: '#1F4E79'}}>Cold Chain Monitor</h1>
+          <h1 className="text-5xl tracking-tight" style={{color: '#152b5a', fontWeight: 600,}}>Cold Chain Monitor</h1>
           <p className="text-sm text-slate-500">
             Real-time hospital refrigeration monitoring
           </p>

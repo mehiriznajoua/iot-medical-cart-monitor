@@ -17,6 +17,7 @@ export const STATE_DESCRIPTIONS = {
   ALERTE_TEMP: 'Temperature exceeded threshold',
   ALERTE_PORTE: 'Door remained open beyond limit',
   PANNE_CAPTEUR: 'Sensor failure detected',
+  MAINTENANCE: 'Maintenance mode active — alerts suppressed',
   OFFLINE: 'Future deployment',
 };
 
@@ -106,6 +107,12 @@ export function getStatusStyles(stateCode) {
         badge: 'bg-red-100 text-red-700 border-red-200',
         dot: 'bg-red-500',
         ring: 'ring-red-200',
+      };
+    case 'MAINTENANCE':
+      return {
+        badge: 'bg-blue-100 text-blue-700 border-blue-200',
+        dot: 'bg-blue-500',
+        ring: 'ring-blue-200',
       };
     default:
       return {

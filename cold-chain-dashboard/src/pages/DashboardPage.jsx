@@ -9,7 +9,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-black tracking-tight" style={{color: '#1F4E79'}}>Dashboard</h2>
+        <h2 className="text-4xl tracking-tight" style={{color: '#152b5a', fontWeight: 550,}}>Dashboard</h2>
         <p className="mt-1 text-sm text-slate-500">
           Overview of hospital cold-chain trolley status
         </p>

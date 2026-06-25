@@ -8,7 +8,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-black tracking-tight" style={{color: '#1F4E79'}}>Settings</h2>
+        <h2 className="text-4xl font-normal tracking-tight" style={{color: '#152b5a', fontWeight: 550,}}>Settings</h2>
         <p className="mt-1 text-sm text-slate-500">
           Manage trolley registry and connection endpoints
         </p>

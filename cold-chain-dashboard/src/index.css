@@ -1,7 +1,10 @@
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@300,400,500,600,700&display=swap');
+
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'General Sans', ui-sans-serif, system-ui, sans-serif;
+
   --color-brand-50: #eaf4fb;
   --color-brand-100: #d0e8f5;
   --color-brand-500: #3B7A99;
@@ -9,7 +12,7 @@
   --color-brand-700: #0D3B66;
 }
 
-* {
+*{
   box-sizing: border-box;
 }
 

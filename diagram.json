@@ -58,6 +58,13 @@
       "top": 400,
       "left": 400,
       "attrs": {}
+    },
+    {
+    "type": "wokwi-pushbutton",
+    "id": "maintBtn",
+    "top": 200,
+    "left": -150,
+    "attrs": { "color": "blue" }
     }
   ],
   "connections": [
@@ -88,6 +95,8 @@
   [ "rtc:SDA", "esp32:D21", "blue", [] ],
   [ "rtc:SCL", "esp32:D22", "yellow", [] ],
   [ "rtc:VCC", "esp32:3V3", "red", [] ],
-  [ "rtc:GND", "esp32:GND.1", "black", [] ]
+  [ "rtc:GND", "esp32:GND.1", "black", [] ],
+  [ "maintBtn:1.l", "esp32:D19", "blue", [] ],
+  [ "maintBtn:2.l", "esp32:GND.1", "black", [] ]
   ]
 }
