@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { Bell, FileText, LayoutGrid, Settings, Snowflake } from 'lucide-react';
+import { Bell, FileText, LayoutGrid, Settings } from 'lucide-react';
+import coldStorageIcon from '../../assets/cold-storage.png';
 import { useMonitor } from '../../context/MonitorContext.jsx';
 
 const navItems = [
@@ -16,7 +17,7 @@ export default function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-slate-900 text-white">
       <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-6">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600">
-          <Snowflake className="h-6 w-6 text-white" />
+          <img src={coldStorageIcon} alt="Cold Chain" className="h-7 w-7 invert" />
         </div>
         <div>
           <p className="text-lg font-bold leading-tight">Cold Chain</p>
