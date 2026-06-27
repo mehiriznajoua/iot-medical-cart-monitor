@@ -1,9 +1,12 @@
+// src/pages/Settings.jsx
+
 import ConnectionConfig from '../components/settings/ConnectionConfig.jsx';
 import TrolleyRegistryTable from '../components/settings/TrolleyRegistryTable.jsx';
 import { useMonitor } from '../context/MonitorContext.jsx';
 
 export default function SettingsPage() {
-  const { registry, updateTrolley, addTrolley, config, updateConfig } = useMonitor();
+  // Ajouter deleteTrolley
+  const { registry, updateTrolley, addTrolley, deleteTrolley, config, updateConfig } = useMonitor();
 
   return (
     <div className="space-y-8">
@@ -18,6 +21,7 @@ export default function SettingsPage() {
         registry={registry}
         onUpdate={updateTrolley}
         onAdd={addTrolley}
+        onDelete={deleteTrolley}  // AJOUTER
       />
 
       <ConnectionConfig config={config} onSave={updateConfig} />

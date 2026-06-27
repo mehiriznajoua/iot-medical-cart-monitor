@@ -1,8 +1,10 @@
+// src/components/settings/TrolleyRegistryTable.jsx
+
 import { useState } from 'react';
-import { Check, Pencil, Plus, X } from 'lucide-react';
+import { Check, Pencil, Plus, X, Trash2 } from 'lucide-react';  // Ajouter Trash2
 import { LIVE_TROLLEY_ID } from '../../config/config.js';
 
-export default function TrolleyRegistryTable({ registry, onUpdate, onAdd }) {
+export default function TrolleyRegistryTable({ registry, onUpdate, onAdd, onDelete }) {  // Ajouter onDelete
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', location: '' });
   const [showAdd, setShowAdd] = useState(false);
@@ -16,6 +18,17 @@ export default function TrolleyRegistryTable({ registry, onUpdate, onAdd }) {
   const saveEdit = (id) => {
     onUpdate(id, editForm);
     setEditingId(null);
+  };
+
+  // Fonction pour supprimer un trolley (À AJOUTER)
+  const handleDelete = (id, name) => {
+    if (id === LIVE_TROLLEY_ID) {
+      alert(`Le chariot "${id}" est un chariot live et ne peut pas être supprimé.`);
+      return;
+    }
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le chariot "${name || id}" ?`)) {
+      onDelete(id);
+    }
   };
 
   const handleAdd = (e) => {
@@ -156,13 +169,24 @@ export default function TrolleyRegistryTable({ registry, onUpdate, onAdd }) {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => startEdit(trolley)}
-                      className="rounded-lg p-2 text-brand-600 hover:bg-brand-50"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(trolley)}
+                        className="rounded-lg p-2 text-brand-600 hover:bg-brand-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      {/* AJOUTER LE BOUTON DELETE */}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(trolley.id, trolley.name)}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-50 transition-colors"
+                        disabled={trolley.id === LIVE_TROLLEY_ID}
+                      >
+                        <Trash2 className={`h-4 w-4 ${trolley.id === LIVE_TROLLEY_ID ? 'opacity-40 cursor-not-allowed' : ''}`} />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

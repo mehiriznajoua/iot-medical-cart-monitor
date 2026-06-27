@@ -62,8 +62,8 @@
     {
     "type": "wokwi-pushbutton",
     "id": "maintBtn",
-    "top": 200,
-    "left": -150,
+    "top": -5,
+    "left": 180,
     "attrs": { "color": "blue" }
     }
   ],

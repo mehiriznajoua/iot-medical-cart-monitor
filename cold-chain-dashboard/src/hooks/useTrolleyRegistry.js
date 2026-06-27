@@ -1,3 +1,5 @@
+// src/hooks/useTrolleyRegistry.js
+
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_TROLLEY_REGISTRY, STORAGE_KEYS } from '../config/config.js';
 
@@ -28,5 +30,16 @@ export function useTrolleyRegistry() {
     });
   }, []);
 
-  return { registry, setRegistry, updateTrolley, addTrolley };
+  // AJOUTER LA FONCTION DELETE
+  const deleteTrolley = useCallback((id) => {
+    setRegistry((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  return { 
+    registry, 
+    setRegistry, 
+    updateTrolley, 
+    addTrolley, 
+    deleteTrolley  // EXPORTER
+  };
 }

@@ -64,10 +64,6 @@ export default function TopNavbar() {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white">
               <User className="h-5 w-5" />
             </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-slate-900">Admin</p>
-              <p className="text-xs text-slate-500">Hospital Staff</p>
-            </div>
           </div>
         </div>
       </div>

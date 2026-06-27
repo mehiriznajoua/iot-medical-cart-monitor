@@ -56,7 +56,8 @@ function shouldRecordAlert(stateCode, prevState) {
 }
 
 export function MonitorProvider({ children }) {
-  const { registry, updateTrolley, addTrolley } = useTrolleyRegistry();
+  const { registry, updateTrolley, addTrolley, deleteTrolley } = useTrolleyRegistry();  // AJOUTER deleteTrolley
+
   const { config, updateConfig } = useAppConfig();
 
   const [connected, setConnected] = useState(false);
@@ -111,7 +112,7 @@ export function MonitorProvider({ children }) {
         timestamp: parsedTime.getTime(),
       };
 
-      setTemperatureHistory((prev) => [...prev, point].slice(-120));
+      setTemperatureHistory((prev) => [...prev, point].slice(-43200));
 
       setTempHistory((prev) => {
         const existing = prev[LIVE_TROLLEY_ID] || [];
@@ -207,6 +208,7 @@ export function MonitorProvider({ children }) {
       registry,
       updateTrolley,
       addTrolley,
+      deleteTrolley,  // AJOUTER
       config,
       updateConfig,
       stats,
@@ -223,6 +225,7 @@ export function MonitorProvider({ children }) {
       registry,
       updateTrolley,
       addTrolley,
+      deleteTrolley,  // AJOUTER
       config,
       updateConfig,
       stats,
